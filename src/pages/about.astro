@@ -1,0 +1,121 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../layouts/Layout.astro';
+import { site } from '../data/site';
+import '../styles/page.css';
+import '../styles/about.css';
+
+// CV-link enkel tonen als het bestand echt in public/ staat
+const hasCv = !!site.cv && fs.existsSync(path.join(process.cwd(), 'public', site.cv));
+const socials = site.socials.filter(s => s.href);
+// 'x' (of iets met een x erin, zoals "Open for an internship, x") = nog in te vullen → gedimd tonen
+const isTodo = (s: string) => s.trim() === 'x' || /(^|[\s,])x$/.test(s.trim());
+
+const facts = [
+  { label: 'Name', value: site.name },
+  { label: 'Based in', value: site.basedIn },
+  { label: 'Studying at', value: site.studyingAt },
+  { label: 'Status', value: site.status },
+];
+---
+
+<Layout title="About" bodyClass="is-page">
+  <main class="case about">
+
+    <!-- titel + portret -->
+    <header class="about-hero">
+      <h1 class="about-title">About</h1>
+      {site.photo && (
+        <figure class="about-photo reveal">
+          <img class="media" src={site.photo} alt={`Portrait of ${site.name}`} loading="eager" decoding="async" />
+        </figure>
+      )}
+    </header>
+
+    <!-- feitenrij -->
+    <dl class="about-facts">
+      {facts.map(f => (
+        <div>
+          <dt>{f.label}</dt>
+          <dd class:list={{ todo: isTodo(f.value) }}>{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <!-- intro -->
+    <section class="about-row">
+      <h2 class="about-label">Intro</h2>
+      <div>
+        <p class:list={['about-intro', { todo: isTodo(site.intro) }]}>{site.intro}</p>
+        {hasCv && <a class="about-link" href={site.cv} download>Download CV <span aria-hidden="true">↓</span></a>}
+      </div>
+    </section>
+
+    <!-- wat ik doe en waarmee: per groep één blok grote woorden, gescheiden door schuine strepen;
+         ze lichten op bij hover, zoals de titels in de trommel -->
+    <section class="about-row">
+      <h2 class="about-label">What I do</h2>
+      <div class="about-skills">
+        {Object.entries(site.skills).map(([group, items]) => (
+          <div class="about-skill-group">
+            <h3 class="about-col-title">{group}</h3>
+            <p class="about-wall">
+              {items.map((item, i) => (
+                <>
+                  <span class:list={['about-word', { todo: isTodo(item) }]}>{item}</span>
+                  {i < items.length - 1 && <span class="about-slash" aria-hidden="true"> / </span>}
+                </>
+              ))}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- opleiding & ervaring -->
+    <section class="about-row">
+      <h2 class="about-label">Education & experience</h2>
+      <div class="about-timeline">
+        {[{ label: 'Education', items: site.education }, { label: 'Experience', items: site.experience }].map(col => (
+          <div>
+            <h3 class="about-col-title">{col.label}</h3>
+            <ul>
+              {col.items.map(e => (
+                <li>
+                  <p class="about-entry">
+                    <strong class:list={{ todo: isTodo(e.name) }}>
+                      {'href' in e && e.href
+                        ? <a class="about-entry-link" href={e.href} target="_blank" rel="noopener">{e.name} <span aria-hidden="true">↗</span></a>
+                        : e.name}
+                    </strong>
+                    <span class:list={['about-years', { todo: isTodo(e.years) }]}>{e.years}</span>
+                  </p>
+                  <p class:list={['about-detail', { todo: isTodo(e.detail) }]}>
+                    {e.detail}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- contact -->
+    <section class="about-contact" id="contact">
+      <!-- de grote tekst zelf opent meteen een nieuwe mail -->
+      <h2 class="about-talk">
+        {isTodo(site.email) ? "Let's talk" : <a class="about-talk-link" href={`mailto:${site.email}`}>Let's talk</a>}
+      </h2>
+      {isTodo(site.email)
+        ? <p class="about-mail todo">x</p>
+        : <a class="about-mail" href={`mailto:${site.email}`}>{site.email}</a>}
+      {socials.length > 0 && (
+        <p class="about-socials">
+          {socials.map(s => <a class="about-link" href={s.href} target="_blank" rel="noopener">{s.label} <span aria-hidden="true">↗</span></a>)}
+        </p>
+      )}
+    </section>
+  </main>
+</Layout>

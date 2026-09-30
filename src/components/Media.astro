@@ -1,0 +1,15 @@
+---
+// toont een beeld of een video-loop (.webm/.mp4), afhankelijk van de extensie
+interface Props {
+  src: string;
+  alt: string;
+  eager?: boolean;
+}
+
+const { src, alt, eager = false } = Astro.props;
+const isVideo = /\.(webm|mp4)$/i.test(src);
+---
+
+{isVideo
+  ? <video class="media" src={src} autoplay loop muted playsinline aria-label={alt}></video>
+  : <img class="media" src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} decoding="async" />}

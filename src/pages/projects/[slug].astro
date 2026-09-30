@@ -1,0 +1,180 @@
+---
+import { getCollection, render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import Media from '../../components/Media.astro';
+import '../../styles/page.css';
+
+export async function getStaticPaths() {
+  const projects = (await getCollection('projects', p => !p.data.draft))
+    .sort((a, b) => a.data.order - b.data.order);
+  return projects.map((project, i) => ({
+    params: { slug: project.id },
+    props: {
+      project,
+      prev: projects[(i - 1 + projects.length) % projects.length],
+      next: projects[(i + 1) % projects.length],
+    },
+  }));
+}
+
+const { project, prev, next } = Astro.props;
+const { Content } = await render(project);
+const d = project.data;
+
+const tags = d.tags ?? [d.tag];
+const links = d.links;
+// mobileDemo kan een live url zijn (iframe) of een lang beeld van het telefoonontwerp
+const demoIsImage = !!d.mobileDemo && /\.(jpe?g|png|webp)$/i.test(d.mobileDemo);
+
+// Figma-link → embed-url (www.figma.com/design/... → embed.figma.com/design/...)
+const toEmbed = (link: string) => {
+  const u = new URL(link);
+  u.hostname = 'embed.figma.com';
+  u.searchParams.delete('t');
+  u.searchParams.delete('m');
+  u.searchParams.set('embed-host', 'share');
+  return u.toString();
+};
+const figmaViews = [
+  d.figma && { label: 'Final design', link: d.figma, embed: toEmbed(d.figma) },
+  d.figmaProcess && { label: 'Process', link: d.figmaProcess, embed: toEmbed(d.figmaProcess) },
+].filter(Boolean) as { label: string; link: string; embed: string }[];
+const figmaEmbed = figmaViews[0]?.embed ?? null;
+---
+
+<Layout title={d.title} description={d.summary} bodyClass="is-page">
+  <main class="case" id="top">
+
+    <a class="case-back" href="/projects" data-back>← Back</a>
+
+    {(d.coverVideo || d.cover) && (
+      <div class:list={['case-header', 'reveal', { 'case-header--video': d.coverVideo }]}>
+        <Media src={(d.coverVideo ?? d.cover)!} alt={`${d.title}, cover`} eager />
+      </div>
+    )}
+
+    <div class="case-head">
+      <h1 class="case-title">{d.title}</h1>
+      <ul class="case-tags">
+        {tags.map(t => <li>{t}</li>)}
+      </ul>
+    </div>
+
+    <div class="case-intro">
+      <dl class="case-meta">
+        <div><dt>Year</dt><dd>{d.year}</dd></div>
+        {d.client && <div><dt>Partners</dt><dd>{d.client}</dd></div>}
+        <div><dt>Role</dt><dd>{d.role}</dd></div>
+        {d.tools.length > 0 && <div><dt>Tools</dt><dd>{d.tools.map(t => <span>{t}</span>)}</dd></div>}
+      </dl>
+
+      <div>
+        <p class="case-lead">{d.summary}</p>
+        {links.length > 0 && (
+          <ul class="case-links">
+            {links.map(l => <li><a href={l.href} target="_blank" rel="noopener">{l.label} <span aria-hidden="true">↗</span></a></li>)}
+          </ul>
+        )}
+      </div>
+    </div>
+
+    <div class:list={['case-body', { 'has-demo': d.mobileDemo }]}>
+      <article class="case-text">
+        <Content />
+      </article>
+
+      {d.mobileDemo && !demoIsImage && (
+        <aside class="case-demo" aria-label="Live mobile experience">
+          <div class="case-demo-head">
+            <p class="case-demo-label">Live demo · Try it yourself</p>
+            <a class="case-demo-open" href={d.mobileDemo} target="_blank" rel="noopener">Open on your phone <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <iframe
+                src={d.mobileDemo}
+                title={`${d.title}: live mobile experience`}
+                loading="lazy"
+                allow="microphone; geolocation; autoplay; clipboard-write"
+              ></iframe>
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* geen live site: het telefoonontwerp als lang beeld, scrollbaar binnen het kader */}
+      {d.mobileDemo && demoIsImage && (
+        <aside class="case-demo" aria-label="Mobile design">
+          <div class="case-demo-head">
+            <p class="case-demo-label">Mobile design · Scroll through it</p>
+          </div>
+          <div class="phone">
+            <div class="phone-screen phone-screen--scroll" tabindex="0" aria-label={`${d.title}: mobile design, scrollable`}>
+              <img src={d.mobileDemo} alt={`${d.title}: full mobile design`} loading="lazy" decoding="async" />
+            </div>
+          </div>
+        </aside>
+      )}
+    </div>
+
+    {figmaEmbed && (
+      <section class="case-figma" aria-label="Figma">
+        <div class="case-demo-head">
+          {figmaViews.length > 1
+            ? (
+              <div class="figma-tabs" role="tablist" aria-label="Figma views">
+                <span class="case-demo-label">Figma ·</span>
+                {figmaViews.map((v, i) => (
+                  <button type="button" role="tab" class="figma-tab" aria-selected={i === 0 ? 'true' : 'false'}
+                          data-embed={v.embed} data-link={v.link}>{v.label}</button>
+                ))}
+              </div>
+            )
+            : <p class="case-demo-label">Figma · {figmaViews[0].label}</p>}
+          <a class="case-demo-open" id="figmaOpen" href={figmaViews[0].link} target="_blank" rel="noopener">Open in Figma <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="case-figma-frame">
+          <iframe id="figmaFrame" src={figmaEmbed} title={`${d.title}: Figma`} loading="lazy" allowfullscreen></iframe>
+        </div>
+      </section>
+    )}
+
+    {d.gallery.length > 0 && (
+      <ul class="case-gallery">
+        {d.gallery.map(g => (
+          <li class:list={['case-shot', { 'is-full': g.size === 'full' }]}>
+            <Media src={g.src} alt={g.alt} />
+          </li>
+        ))}
+      </ul>
+    )}
+
+    <nav class="case-pager" aria-label="More projects">
+      <a href={`/projects/${prev.id}`}><span>← Previous</span><strong>{prev.data.title}</strong></a>
+      <a class="case-top" href="#top">Back to top ↑</a>
+      <a class="next" href={`/projects/${next.id}`}><span>Next →</span><strong>{next.data.title}</strong></a>
+    </nav>
+  </main>
+
+  <script is:inline>
+    // Figma-tabbladen: wissel tussen eindontwerp en proces (een tabblad laadt pas als je erop klikt)
+    (() => {
+      const tabs = document.querySelectorAll('.figma-tab');
+      const frame = document.getElementById('figmaFrame');
+      const open = document.getElementById('figmaOpen');
+      tabs.forEach(tab => tab.addEventListener('click', () => {
+        tabs.forEach(t => t.setAttribute('aria-selected', t === tab ? 'true' : 'false'));
+        if (frame.src !== tab.dataset.embed) frame.src = tab.dataset.embed;
+        open.href = tab.dataset.link;
+      }));
+    })();
+
+    // "Back" gaat terug naar waar je vandaan kwam (bv. de trommel), anders naar het overzicht
+    document.querySelector('[data-back]')?.addEventListener('click', e => {
+      if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) {
+        e.preventDefault();
+        history.back();
+      }
+    });
+  </script>
+</Layout>

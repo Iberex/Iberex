@@ -1,0 +1,162 @@
+/* ─────────────────────────────────────────────
+   ABOUT — mobile first; vanaf 761px twee kolommen (label | inhoud)
+   ───────────────────────────────────────────── */
+
+/* kleine labels tussen haakjes: (Name), (Intro), ... */
+.about-facts dt,
+.about-label,
+.about-col-title,
+.about-years {
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── titel + portret ── */
+.about-hero {
+  display: grid;
+  gap: 1.5rem;
+}
+.about-title {
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: clamp(4.5rem, 22vw, 15rem);
+  line-height: 0.88;
+  color: var(--title-hover);
+}
+.about-photo { max-width: 22rem; }
+.about-photo .media {
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: 50% 65%;   /* gezicht en houding in beeld, niet de lucht */
+  background: var(--band);
+}
+
+/* ── feitenrij ── */
+.about-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem var(--gap);
+  margin-top: clamp(2rem, 4vw, 3rem);
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+.about-facts dd { margin-top: 0.3rem; color: var(--title-hover); }
+
+/* ── rij: label boven (gsm) of links (desktop), inhoud ── */
+.about-row {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: clamp(4rem, 9vw, 7rem);
+}
+.about-intro {
+  font-size: clamp(1.3rem, 2.4vw, 2.1rem);
+  line-height: 1.3;
+  color: var(--title-hover);
+  max-width: 44rem;
+}
+.about-link {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: var(--title-hover);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.15rem;
+  transition: border-color 0.2s;
+}
+.about-link:hover { border-color: var(--title-hover); }
+
+/* ── wat ik doe: blokken grote woorden met schuine strepen, lichten op bij hover ── */
+.about-skills { display: grid; gap: 2.5rem; }
+.about-wall {
+  font-family: 'Anton', sans-serif;
+  text-transform: uppercase;
+  font-size: clamp(2rem, 5.2vw, 4rem);
+  line-height: 1.02;
+  color: var(--title);
+}
+.about-word {
+  transition: color 0.2s;
+  cursor: default;
+}
+.about-word:hover { color: var(--title-hover); }
+.about-slash { color: var(--line); }
+
+/* ── opleiding & ervaring ── */
+.about-timeline { display: grid; gap: 2.5rem; }
+.about-col-title { margin-bottom: 0.75rem; }
+.about-timeline ul { list-style: none; border-top: 1px solid var(--line); }
+.about-timeline li { padding: 0.8rem 0; border-bottom: 1px solid var(--line); }
+.about-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+.about-entry strong {
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: var(--title-hover);
+}
+.about-detail { color: var(--muted); margin-top: 0.15rem; }
+
+/* ── contact ── */
+.about-contact {
+  margin-top: clamp(5rem, 12vw, 10rem);
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+.about-talk {
+  font-family: 'Anton', sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: clamp(4.5rem, 21vw, 17rem);
+  line-height: 0.9;
+  color: var(--title-hover);
+  margin-top: 0.5rem;
+}
+/* LET'S TALK is klikbaar: dooft bij hover en schuift een tikje op, zoals de titels in de trommel oplichten */
+.about-talk-link {
+  display: inline-block;
+  transition: color 0.25s, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.about-talk-link:hover { color: var(--title); transform: translateX(0.08em); }
+.about-mail {
+  display: inline-block;
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: var(--title-hover);
+  word-break: break-word;
+  border-bottom: 1px solid var(--line);
+  transition: border-color 0.2s;
+}
+a.about-mail:hover { border-color: var(--title-hover); }
+.about-socials { display: flex; flex-wrap: wrap; gap: 0 2rem; }
+
+/* nog in te vullen: gedimd, maar niet cursief in de grote Anton-regels */
+.about .todo { color: var(--title); font-style: normal; }
+.about-intro.todo,
+.about-facts dd.todo,
+.about-detail.todo { font-style: italic; }
+
+@media (min-width: 761px) {
+  .about-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+    align-items: start;
+  }
+  .about-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .about-row { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--gap); }
+  .about-timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
+}
+
+
+/* naam van een werkgever/school als link: licht op zoals de rest */
+.about-entry-link { transition: color 0.2s; }
+.about-entry-link span { font-family: 'Roboto', sans-serif; font-size: 0.9rem; vertical-align: 0.35em; color: var(--muted); }
+.about-entry-link:hover,
+.about-entry-link:hover span { color: var(--title); }

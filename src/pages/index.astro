@@ -1,0 +1,391 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import '../styles/home.css';
+
+// projecten komen uit src/content/projects/*.md
+const projects = (await getCollection('projects', p => !p.data.draft))
+  .sort((a, b) => a.data.order - b.data.order)
+  .map(p => ({
+    slug: p.id,
+    title: p.data.title,
+    lines: p.data.lines,
+    tags: p.data.tags ?? [p.data.tag],
+    year: p.data.year,
+    // klant: enkel als die echt verschilt van de titel, anders de context (School, Personal, Client)
+    client: p.data.client && p.data.client !== p.data.title ? p.data.client : p.data.context,
+    team: p.data.team ?? '',
+  }));
+---
+
+<Layout bodyClass="is-home">
+
+    <!-- info naast het project in het midden: solo/group links, klant + tags + jaar rechts -->
+    <p class="drum-side drum-team" id="drumTeam" aria-hidden="true"></p>
+    <div class="drum-side drum-info" id="drumInfo" aria-hidden="true"></div>
+
+    <div class="stage">
+      <div class="clip" id="clip">
+        <div class="list" id="list">
+          <!-- rows injected by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- toegankelijke lijst voor schermlezers en toetsenbord (de trommel is visueel) -->
+    <ul class="sr-only">
+      {projects.map(p => <li><a href={`/projects/${p.slug}`}>{p.title}</a></li>)}
+    </ul>
+
+    <!-- animatie die de cursor volgt bij hover (ogen met alpha) -->
+    <video class="cursor-gif" id="cursorGif" src="/eyes.webm"
+           autoplay loop muted playsinline aria-hidden="true"></video>
+
+    <script define:vars={{ projects }}>
+      // vlakke lijst van regels: een project met meerdere `lines` levert meerdere vakjes op,
+      // zodat elke regel exact even ver van de vorige/volgende staat als alle andere projecten
+      const display = [];
+      projects.forEach((p, pi) => {
+        if (p.lines) p.lines.forEach(text => display.push({ p, pi, text }));
+        else display.push({ p, pi, text: p.title });
+      });
+      const nd = display.length;                          // aantal regel-vakjes in één cyclus
+      const REPEATS = Math.max(2, Math.round(18 / nd));   // hoe vaak de cyclus rond de cilinder past
+      const SLOTS = nd * REPEATS;                          // aantal vakjes op de cilinder
+      const ITEM_ANGLE = 360 / SLOTS;                     // graden tussen twee vakjes
+
+      // midden van elk project in rij-eenheden (meerregelige projecten → tussen hun regels in)
+      const projCenters = [];   // één waarde per project
+      const dispCenter = [];    // per regel-vakje → het midden van zijn project
+      (() => {
+        let idx = 0;
+        projects.forEach(p => {
+          const L = p.lines ? p.lines.length : 1;
+          const c = idx + (L - 1) / 2;
+          projCenters.push(c);
+          for (let k = 0; k < L; k++) dispCenter.push(c);
+          idx += L;
+        });
+      })();
+
+      // dichtstbijzijnde project-midden (in rij-eenheden) t.o.v. een positie
+      function nearestProjectUnit(unit) {
+        let best = unit, bestD = Infinity;
+        projCenters.forEach(c => {
+          const m = Math.round((unit - c) / nd);
+          const cand = c + m * nd;
+          const d = Math.abs(cand - unit);
+          if (d < bestD) { bestD = d; best = cand; }
+        });
+        return best;
+      }
+
+      const clip = document.getElementById('clip');
+      const list = document.getElementById('list');
+      const drumTeam = document.getElementById('drumTeam');
+      const drumInfo = document.getElementById('drumInfo');
+      const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      let shownProject = null;
+      function showInfo(p) {
+        if (p === shownProject) return;
+        shownProject = p;
+        drumTeam.textContent = p.team ? `${p.team} project` : '';
+        drumInfo.innerHTML = `
+          <span class="drum-client">${esc(p.client)}</span>
+          <ul>${p.tags.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+          <span class="drum-year">${esc(p.year)}</span>`;
+      }
+      let centerProject = null;
+
+      function mod(x, m) { return ((x % m) + m) % m; }
+
+      let rowH = 0;      // "hoogte" van één vakje (booglengte)
+      let radius = 0;    // straal van de trommel in px
+      let loopH = 0;     // px voor één volledige titel-cyclus
+      let target = 0;    // waar we naartoe draaien (px)
+      let pos = 0;       // waar we nu staan (px), loopt achter target aan
+      let speed = 0;     // px/frame, voor motion blur
+      let rows = [];
+
+      function buildRows() {
+        list.innerHTML = '';
+        rows = [];
+        for (let i = 0; i < SLOTS; i++) {
+          const d = display[mod(i, nd)];
+          const a = document.createElement('a');
+          a.href = `/projects/${d.p.slug}`;
+          a.tabIndex = -1;                          // toetsenbord: pijltjes + Enter (zie keydown)
+          a.className = 'row';
+          a.dataset.proj = String(d.pi);          // welk project deze regel hoort
+          a.innerHTML = `<span class="row-title">${d.text}</span>`;
+          a.addEventListener('click', e => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;   // nieuw tabblad mag gewoon
+            e.preventDefault();
+            // centreer het HELE project van deze regel, niet de losse regel
+            const local = mod(i, nd);
+            centerRow(i + (dispCenter[local] - local));
+            openProject(d.p);
+          });
+          const titleEl = a.querySelector('.row-title');
+          titleEl.addEventListener('mouseenter', () => {
+            cursorGif.classList.add('is-visible');
+            list.classList.add('is-hovering');
+            setHover(i, true);   // alle regels van dit project mee oplichten
+          });
+          titleEl.addEventListener('mouseleave', () => {
+            cursorGif.classList.remove('is-visible');
+            list.classList.remove('is-hovering');
+            setHover(i, false);
+          });
+          list.appendChild(a);
+          rows.push(a);
+        }
+      }
+
+      // markeer alle regels van hetzelfde project (dichtbij regel i) als gehoverd
+      function setHover(i, on) {
+        const proj = rows[i].dataset.proj;
+        for (let j = i - 2; j <= i + 2; j++) {
+          const r = rows[mod(j, rows.length)];
+          if (r.dataset.proj === proj) {
+            r.firstElementChild.classList.toggle('is-hover', on);
+          }
+        }
+      }
+
+      const stage = document.querySelector('.stage');
+      const rem = () => parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+      function measure() {
+        // de trommel vult de stage (op gsm: tussen menu en themakiezer, op groot scherm: het hele scherm)
+        const cs = getComputedStyle(stage);
+        const bandH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+        rowH = Math.round(bandH * 0.15);        // ruimte tussen titels
+        // straal zodat naburige vakjes exact rowH uit elkaar liggen langs de boog
+        radius = (rowH / 2) / Math.tan((ITEM_ANGLE / 2) * Math.PI / 180);
+        loopH = rowH * nd;
+        clip.style.height = `${bandH}px`;
+        // lettergrootte groeit mee met de rijhoogte (laptop: 6rem), zo blijft de verhouding op elk scherm gelijk
+        const baseFs = rowH * 0.74;
+        // ruimte die een titel maximaal mag innemen (op groot scherm: links en rechts plaats voor de info)
+        const mobile = window.innerWidth <= 720;
+        const sideW = mobile ? 0 : 12 * rem() + 2.5 * rem();
+        // de middelste rij staat `radius` dichter bij de kijker (perspectief) en lijkt dus groter dan gemeten
+        const persp = parseFloat(getComputedStyle(clip).perspective) || 1100;
+        const zoom = persp / Math.max(1, persp - radius);
+        const maxTitleW = (window.innerWidth - 2 * (mobile ? 20 : sideW) - (mobile ? 0 : 24)) / zoom;
+        rows.forEach(r => {
+          r.style.height = `${rowH}px`;
+          r.style.marginTop = `${-rowH / 2}px`;
+          // lange titels op één regel automatisch verkleinen
+          const title = r.firstElementChild;
+          title.style.fontSize = baseFs + 'px';
+          const natural = title.scrollWidth;
+          if (natural > maxTitleW) title.style.fontSize = (baseFs * maxTitleW / natural) + 'px';
+        });
+        render();
+      }
+
+      function render() {
+        const cf = pos / rowH; // hoeveel vakjes gedraaid
+        const blur = Math.min(3, speed * 0.08);   // lichte motion blur
+        let centerIdx = -1, centerAbs = Infinity;
+        const SQUEEZE = 0.78;   // regels van een meerregelig project dichter bij elkaar (1 = normale afstand)
+        for (let i = 0; i < rows.length; i++) {
+          // trek regels van hetzelfde project naar hun blok-midden toe
+          const local = mod(i, nd);
+          const absCenter = i + (dispCenter[local] - local);
+          const ai = absCenter + (i - absCenter) * SQUEEZE;
+          let a = (ai - cf) * ITEM_ANGLE;
+          a = mod(a + 180, 360) - 180; // kortste hoek naar dit vakje
+          const row = rows[i];
+          if (Math.abs(a) > 88) { row.style.visibility = 'hidden'; continue; }
+          const rad = a * Math.PI / 180;
+          const f = Math.cos(rad); // 1 in het midden, 0 aan de rand
+          row.style.visibility = 'visible';
+          row.style.transform = `rotateX(${-a}deg) translateZ(${radius}px)`;
+          row.style.opacity = Math.max(0, f).toFixed(3);
+          const title = row.firstElementChild;
+          title.style.filter = `brightness(${(0.32 + 0.68 * Math.max(0, f)).toFixed(3)}) blur(${(blur * (1 - f)).toFixed(2)}px)`;
+          if (Math.abs(a) < centerAbs) { centerAbs = Math.abs(a); centerIdx = i; }
+        }
+        // markeer alle regels van het centrale project (het blok licht als geheel op)
+        const centerProj = centerIdx !== -1 ? display[mod(centerIdx, nd)].p : null;
+        for (let i = 0; i < rows.length; i++) {
+          const near = Math.abs(i - centerIdx) <= 2;
+          const same = centerProj && display[mod(i, nd)].p === centerProj && near;
+          rows[i].firstElementChild.classList.toggle('is-center', same);
+        }
+
+        if (!centerProj) return;
+        centerProject = centerProj;
+
+        // info enkel tonen als de trommel tot rust komt
+        const resting = speed < 0.6;
+        if (resting) showInfo(centerProj);
+        drumTeam.classList.toggle('is-on', resting && !!centerProj.team);
+        drumInfo.classList.toggle('is-on', resting);
+
+        // naast het HELE project plaatsen (alle regels samen), niet naast één losse regel
+        let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+        for (let i = centerIdx - 2; i <= centerIdx + 2; i++) {
+          if (display[mod(i, nd)].p !== centerProj) continue;
+          const b = rows[mod(i, rows.length)].firstElementChild.getBoundingClientRect();
+          if (b.left < left) left = b.left;
+          if (b.right > right) right = b.right;
+          if (b.top < top) top = b.top;
+          if (b.bottom > bottom) bottom = b.bottom;
+        }
+        const GAP = 2.25 * rem(), mid = ((top + bottom) / 2) + 'px';
+        drumTeam.style.right = (window.innerWidth - left + GAP) + 'px';
+        drumTeam.style.top = mid;
+        drumInfo.style.left = (right + GAP) + 'px';
+        drumInfo.style.top = mid;
+      }
+
+      let lastNotch = 0;      // laatst gepasseerde vakje-index
+
+      // veer-demping: bouwt snelheid op en loopt zacht uit (geen abrupte start/stop)
+      let vel = 0;
+      function tick() {
+        const prev = pos;
+        const diff = target - pos;
+        if (Math.abs(diff) > 0.05 || Math.abs(vel) > 0.05) {
+          vel += diff * 0.014;   // veerkracht: hoger = sneller
+          vel *= 0.82;           // demping: lager = stopt sneller
+          pos += vel;
+        } else if (pos !== target) {
+          pos = target;
+          vel = 0;
+        }
+        speed += (Math.abs(pos - prev) - speed) * 0.3;
+
+        // klik telkens de trommel een nieuw vakje passeert; volume volgt de snelheid → dooft mee uit
+        const notch = Math.round(pos / rowH);
+        if (notch !== lastNotch && rowH > 0) {
+          lastNotch = notch;
+          window.sound.click(Math.min(1, 0.15 + speed * 0.02));
+        }
+
+        render();
+        requestAnimationFrame(tick);
+      }
+
+      // rol zodat het aangeklikte vakje in het midden komt
+      function centerRow(i) {
+        let a = (i - target / rowH) * ITEM_ANGLE;
+        a = mod(a + 180, 360) - 180;        // kortste weg
+        nudge((a / ITEM_ANGLE) * rowH);
+      }
+
+      function nudge(px) {
+        target += px;
+        if (target > loopH * 2 || target < -loopH) {
+          const shift = mod(target, loopH) - target;
+          target += shift;
+          pos += shift;
+        }
+      }
+
+      // klik het doel vast op het dichtstbijzijnde project-midden (blok blijft één geheel)
+      function snapTarget() {
+        target = nearestProjectUnit(target / rowH) * rowH;
+        if (target > loopH * 2 || target < -loopH) {
+          const shift = mod(target, loopH) - target;
+          target += shift;
+          pos += shift;
+        }
+      }
+
+      // kort de ogen + een tik tonen, dan meteen door: de CRT-overgang (base.css) doet de rest
+      let opening = false;
+      const hasViewTransitions = 'CSSViewTransitionRule' in window;
+      function openProject(p) {
+        if (opening) return;
+        opening = true;
+        playHypno(false);          // enkel beeld: het lange hypno-geluid zou bij het wisselen afgekapt worden
+        window.sound.click(0.8);
+        // zonder view transitions (bv. Firefox): zelf snel uitfaden
+        if (!hasViewTransitions) document.body.classList.add('is-leaving');
+        setTimeout(() => { window.location.href = `/projects/${p.slug}`; }, hasViewTransitions ? 160 : 220);
+      }
+      // bij terugkeren via de terug-knop (bfcache) weer klikbaar maken
+      window.addEventListener('pageshow', () => {
+        opening = false;
+        document.body.classList.remove('is-leaving');
+      });
+
+      // openings-spin, alsof de machine net is aangeslingerd
+
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function initialSpin() {
+        pos = 0;
+        if (reducedMotion) { target = 0; snapTarget(); pos = target; return; }
+        target = rowH * (nd * 6 + Math.floor(Math.random() * nd));
+        snapTarget();
+      }
+
+      let snapTimer = null;
+      function scheduleSnap() {
+        clearTimeout(snapTimer);
+        snapTimer = setTimeout(snapTarget, 130);   // snap zodra het scrollen even stilvalt
+      }
+
+      window.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        nudge(e.deltaY * 1.1);
+        scheduleSnap();
+      }, { passive: false });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') { nudge(rowH); snapTarget(); }
+        if (e.key === 'ArrowUp')   { nudge(-rowH); snapTarget(); }
+        if (e.key === 'Enter' && centerProject && !e.target.closest('button, a')) openProject(centerProject);
+      });
+
+      let ty = null;
+      window.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, { passive: true });
+      window.addEventListener('touchmove', e => {
+        if (ty === null) return;
+        const y = e.touches[0].clientY;
+        nudge((ty - y) * 1.6);
+        ty = y;
+      }, { passive: true });
+      window.addEventListener('touchend', () => { ty = null; snapTarget(); });
+
+      // ── cursor-volgende ogen (verschijnen bij hover over een project) ──
+      const cursorGif = document.getElementById('cursorGif');
+      window.addEventListener('mousemove', (e) => {
+        cursorGif.style.top = e.clientY + 'px';
+        cursorGif.style.left = e.clientX + 'px';
+      }, { passive: true });
+
+      let hypnoPlaying = false;
+      function playHypno(withSound = true) {
+        if (hypnoPlaying) return;
+        hypnoPlaying = true;
+        if (withSound) window.sound.hypno();
+        cursorGif.loop = false;
+        cursorGif.src = '/eyes-hypno.webm';
+        cursorGif.play().catch(() => {});
+        cursorGif.onended = () => {
+          cursorGif.onended = null;
+          cursorGif.loop = true;
+          cursorGif.src = '/eyes.webm';
+          cursorGif.play().catch(() => {});
+          hypnoPlaying = false;
+        };
+      }
+
+      buildRows();
+      measure();
+      // opnieuw meten zodra Anton geladen is: anders klopt de breedte van de titels niet (gsm: titels vielen buiten beeld)
+      document.fonts?.ready.then(measure);
+      // de trommel begint pas te draaien als het welkomstscherm weg is
+      (window.welcome || Promise.resolve()).then(initialSpin);
+      window.addEventListener('resize', measure);
+      requestAnimationFrame(tick);
+    </script>
+
+</Layout>

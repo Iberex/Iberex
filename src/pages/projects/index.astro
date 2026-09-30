@@ -1,0 +1,36 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import Media from '../../components/Media.astro';
+import '../../styles/page.css';
+
+const projects = (await getCollection('projects', p => !p.data.draft))
+  .sort((a, b) => a.data.order - b.data.order);
+---
+
+<Layout title="Projects" bodyClass="is-page">
+  <main class="case">
+    <div class="case-head case-head--page">
+      <h1 class="case-title">Projects</h1>
+    </div>
+
+    <ul class="work-grid">
+      {projects.map(p => (
+        <li>
+          <a class="work" href={`/projects/${p.id}`}>
+            <div class="work-image">
+              {p.data.cover
+                ? <Media src={p.data.cover} alt="" />
+                : <span class="work-placeholder" aria-hidden="true">{p.data.title}</span>}
+            </div>
+            <div class="work-info">
+              <h2 class="work-title">{p.data.title}</h2>
+              <span class="work-year">{p.data.year}</span>
+            </div>
+            <p class="work-tags">{(p.data.tags ?? [p.data.tag]).join(' · ')}</p>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </main>
+</Layout>

@@ -1,0 +1,147 @@
+/* homepage: vast scherm, de trommel vangt het scrollen op */
+body.is-home {
+  height: 100vh;
+  height: 100dvh;   /* gsm: zonder de adresbalk mee te tellen */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── CENTER STAGE ── */
+/* gsm: de trommel draait tussen de naam/menu bovenaan en de themakiezer onderaan */
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7.5rem 0 4rem;
+}
+@media (min-width: 721px) {
+  .stage { padding: 0; }
+}
+
+/* ── info naast het project in het midden: solo/group links, klant + tags + jaar rechts ── */
+.drum-side {
+  display: none;   /* gsm: geen plaats naast de titel */
+  position: fixed;
+  z-index: 5;
+  pointer-events: none;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  line-height: 1.8;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--title-hover) 55%, transparent);
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.drum-team { transform: translate(-10px, -50%); text-align: right; white-space: nowrap; color: var(--title-hover); }
+.drum-info { transform: translate(10px, -50%); max-width: 12rem; }
+.drum-side.is-on { opacity: 1; transform: translate(0, -50%); }
+.drum-client {
+  display: block;
+  color: var(--title-hover);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--title-hover) 20%, transparent);
+}
+.drum-info ul { list-style: none; }
+.drum-info li { white-space: nowrap; }
+.drum-year {
+  display: block;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--title-hover) 20%, transparent);
+  color: var(--title-hover);
+}
+
+@media (min-width: 721px) {
+  .drum-side { display: block; }
+}
+
+/* clip window: shows exactly 4 rows, centered in the screen */
+.clip {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  background: transparent;
+  perspective: 1100px;
+  perspective-origin: 50% 50%;
+}
+
+
+/* de draaiende trommel */
+.list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* elke rij ligt op de mantel van de cilinder */
+.row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  color: #fff;
+  cursor: pointer;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+.row-title {
+  font-family: 'Anton', sans-serif;
+  font-size: 6rem;
+  text-transform: uppercase;
+  color: var(--title);
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  display: inline-block;
+  transition: color 0.2s;
+}
+/* de titel die centraal in de trommel staat licht wit op */
+.row-title.is-center { color: var(--title-hover); }
+/* maar zodra je een andere titel hovert, dooft de centrale weer */
+.list.is-hovering .row-title.is-center { color: var(--title); }
+/* de gehoverde titel (en de andere regels van hetzelfde project) winnen altijd */
+.row-title:hover,
+.row-title.is-hover,
+.list.is-hovering .row-title:hover,
+.list.is-hovering .row-title.is-hover { color: var(--title-hover); }
+
+/* gif die de cursor volgt: verschijnt bij hover over de titels */
+.cursor-gif {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 7rem;
+  height: auto;
+  transform: translate(-32%, -68%) scale(0.8);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 9998;              /* onder de CRT-overlay, boven de content */
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  will-change: transform, opacity;
+}
+.cursor-gif.is-visible {
+  opacity: 1;
+  transform: translate(-32%, -68%) scale(1);
+}
+
+/* heel subtiele CRT-kleurrand, enkel op de titel in het midden */
+.row-title.is-center {
+  text-shadow:
+    -0.8px 0 rgba(255, 0, 64, 0.28),
+    0.8px 0 rgba(0, 208, 255, 0.28);
+}

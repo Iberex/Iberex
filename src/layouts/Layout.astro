@@ -1,0 +1,370 @@
+---
+import '../styles/base.css';
+import Nav from '../components/Nav.astro';
+import { site } from '../data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  bodyClass?: string;
+}
+
+const { title, description = site.description, bodyClass } = Astro.props;
+const fullTitle = title ? `${title} | ${site.name}` : `${site.name} | ${site.role}`;
+const isHome = Astro.url.pathname === '/';
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- inline (niet via base.css), zodat de overgang ook in dev al bij de eerste render klaarstaat -->
+    <style is:inline>
+      /* ─────────────────────────────────────────────
+         PAGINA-OVERGANG: zachte overvloeier
+         native cross-document view transitions (Chrome, Edge, Safari 18.2+)
+         ───────────────────────────────────────────── */
+      @view-transition { navigation: auto; }
+
+      /* oude pagina: vervaagt, zakt een fractie weg en dooft uit */
+      ::view-transition-old(root) {
+        animation: page-out 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+      }
+      /* nieuwe pagina: komt er overheen, van wazig naar scherp */
+      ::view-transition-new(root) {
+        animation: page-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+      }
+
+      @keyframes page-out {
+        from { opacity: 1; transform: scale(1); }
+        to   { opacity: 0; transform: scale(0.99); }
+      }
+      @keyframes page-in {
+        from { opacity: 0; transform: scale(1.01); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        ::view-transition-old(root),
+        ::view-transition-new(root) { animation: none; }
+      }
+    </style>
+    <!-- thema meteen zetten, zodat er bij het laden geen flits van het verkeerde thema is -->
+    <script is:inline>
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark' || t === 'ibe') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+
+      // welkomstscherm: één keer per bezoek. window.welcome is een belofte die afloopt zodra het scherm weg is
+      // (de trommel op de homepage wacht daarop om te beginnen draaien)
+      (() => {
+        let show = true;
+        try { show = !sessionStorage.getItem('welcomed'); } catch (e) {}
+        let done;
+        window.welcome = new Promise(r => { done = r; });
+        window.__welcomeDone = done;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (show) document.documentElement.classList.add('is-welcoming');
+        // al verwelkomd: bij elke refresh of nieuwe pagina gaat het scherm aan zoals een oude CRT-tv
+        else if (!reduced) document.documentElement.classList.add('is-tv');
+        else done();
+      })();
+    </script>
+  </head>
+  <body class={bodyClass}>
+
+    <!-- welkomstscherm (enkel zichtbaar met html.is-welcoming, zonder JS dus nooit in de weg) -->
+    <div class="welcome" id="welcome" aria-hidden="true">
+      <p class="welcome-top">
+        <span>{site.school.name} {site.role}</span>
+        <span>Portfolio</span>
+      </p>
+      <div class="welcome-center">
+        <video class="welcome-eyes" id="welcomeEyes" src="/eyes.webm" autoplay loop muted playsinline></video>
+        <p class="welcome-name">
+          {site.name.split('').map((ch, i) => (
+            <span class="welcome-char" style={`--i:${i}`}>{ch === ' ' ? '\u00a0' : ch}</span>
+          ))}
+        </p>
+      </div>
+      <div class="welcome-bottom">
+        <p class="welcome-type"><span id="welcomeText"></span><span class="welcome-cursor">_</span></p>
+        <p class="welcome-count"><span id="welcomeCount">000</span>%</p>
+      </div>
+      <span class="welcome-bar" id="welcomeBar"></span>
+    </div>
+    <!-- tv gaat aan bij elke (her)lading: sneeuw (de beeldbuis-animatie zelf zit op <body>) -->
+    <div class="tv-static" id="tvStatic" aria-hidden="true"></div>
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const parts = [document.getElementById('tvStatic')];
+        if (!root.classList.contains('is-tv')) { parts.forEach(p => p.remove()); return; }
+        // de lijn moet in het midden van het scherm openklappen, ook als de browser na een refresh
+        // naar je oude scrollpositie springt
+        const centre = () => { document.body.style.transformOrigin = `50% ${scrollY + innerHeight / 2}px`; };
+        centre();
+        addEventListener('scroll', centre, { passive: true });
+        setTimeout(() => { removeEventListener('scroll', centre); document.body.style.transformOrigin = ''; }, 1500);
+        // de trommel mag beginnen draaien zodra het beeld open is
+        setTimeout(() => window.__welcomeDone(), 700);
+        // opruimen als de sneeuw weg is (klasse blijft: beelden faden nog even in)
+        const end = () => parts.forEach(p => p.remove());
+        parts[0].addEventListener('animationend', e => { if (e.animationName === 'tv-static') end(); });
+        setTimeout(end, 3000);   // vangnet
+        // terug via de terug-knop (bfcache): niet opnieuw tonen
+        window.addEventListener('pageshow', e => { if (e.persisted) { root.classList.remove('is-tv'); end(); } });
+      })();
+    </script>
+
+    <script is:inline>
+      // ── WELKOM: telt mee met wat er echt laadt (letters, beelden, video), minstens ±2 s, dan omhoog weg ──
+      (() => {
+        const root = document.documentElement;
+        const el = document.getElementById('welcome');
+        if (!root.classList.contains('is-welcoming')) { el.remove(); return; }
+
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const MIN = reduced ? 600 : 2200;      // zo lang blijft het welkom minstens staan
+        const MAX = 7000;                      // traag netwerk: niet langer laten wachten
+        const countEl = document.getElementById('welcomeCount');
+        const barEl = document.getElementById('welcomeBar');
+        const textEl = document.getElementById('welcomeText');
+        const eyes = document.getElementById('welcomeEyes');
+
+        // wat moet er klaar zijn?
+        const tasks = [
+          document.fonts ? document.fonts.ready : Promise.resolve(),
+          new Promise(r => (document.readyState === 'complete' ? r() : window.addEventListener('load', r, { once: true }))),
+          new Promise(r => (eyes.readyState >= 3 ? r() : (eyes.addEventListener('canplaythrough', r, { once: true }), eyes.addEventListener('error', r, { once: true })))),
+        ];
+        let loaded = 0;
+        tasks.forEach(t => t.then(() => { loaded++; }));
+
+        // getypte regel, zoals op de allereerste versie van de site
+        const line = '> creative.exe is loading...';
+        let typed = 0;
+        const typer = setInterval(() => {
+          typed++;
+          textEl.textContent = line.slice(0, typed);
+          if (typed >= line.length) clearInterval(typer);
+        }, reduced ? 0 : 55);
+
+        const start = performance.now();
+        let shown = 0;
+        function frame(now) {
+          const elapsed = now - start;
+          const real = elapsed > MAX ? 1 : (loaded + 0.15) / (tasks.length + 0.15);
+          const target = Math.min(real, elapsed / MIN);
+          shown += (target - shown) * 0.12;
+          if (target >= 1 && shown > 0.995) shown = 1;
+          countEl.textContent = String(Math.round(shown * 100)).padStart(3, '0');
+          barEl.style.transform = `scaleX(${shown})`;
+          if (shown < 1) return requestAnimationFrame(frame);
+          finish();
+        }
+        requestAnimationFrame(frame);
+
+        function finish() {
+          clearInterval(typer);
+          textEl.textContent = '> ready. welcome!';
+          try { sessionStorage.setItem('welcomed', '1'); } catch (e) {}
+          setTimeout(() => {
+            el.classList.add('is-leaving');
+            const end = () => {
+              root.classList.remove('is-welcoming');
+              el.remove();
+              window.__welcomeDone();
+            };
+            if (reduced) return end();
+            el.addEventListener('transitionend', e => { if (e.target === el) end(); });
+            setTimeout(end, 1600);   // vangnet als transitionend niet komt
+          }, reduced ? 0 : 450);
+        }
+      })();
+    </script>
+
+    <header class="intro">
+      <p class="intro-sub">{site.school.name} {site.role}</p>
+      {isHome
+        ? <h1 class="intro-name">{site.name}</h1>
+        : <a class="intro-name intro-link" href="/">{site.name}</a>}
+    </header>
+
+    <Nav />
+
+    <div class="theme-switch" id="themeSwitch" role="radiogroup" aria-label="Choose theme">
+      <span class="theme-bar" id="themeBar" aria-hidden="true"></span>
+      <button class="theme-opt" type="button" data-theme="light" role="radio">Light</button>
+      <button class="theme-opt" type="button" data-theme="dark"  role="radio">Dark</button>
+      <button class="theme-opt" type="button" data-theme="ibe"   role="radio">Ibe</button>
+    </div>
+
+    <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">Sound on</button>
+
+    <script is:inline>
+      // ── gedeeld geluid (zelf gegenereerd met Web Audio): window.sound ──
+      window.sound = (() => {
+        let ctx = null;
+        let enabled = true;
+        try { enabled = localStorage.getItem('sound') !== 'off'; } catch (e) {}
+
+        function audio() {
+          if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+          if (ctx.state === 'suspended') ctx.resume();
+          return ctx;
+        }
+
+        // korte toon-tik met snelle decay
+        function click(vol) {
+          if (!enabled) return;
+          try {
+            const audioCtx = audio();
+            const t = audioCtx.currentTime;
+            const v = Math.max(0, Math.min(1, vol));
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(1600, t);
+            osc.frequency.exponentialRampToValueAtTime(700, t + 0.02);
+            gain.gain.setValueAtTime(v * 0.35, t);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(t);
+            osc.stop(t + 0.035);   // stopt altijd, blijft nooit hangen
+          } catch (e) {}
+        }
+
+        // duizelig, zakkend hypno-geluid bij het openen van een project
+        function hypno() {
+          if (!enabled) return;
+          try {
+            const audioCtx = audio();
+            const t = audioCtx.currentTime;
+            const DUR = 2.2;
+
+            const master = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(1800, t);
+            filter.frequency.exponentialRampToValueAtTime(400, t + DUR); // dof weg-draaien
+            filter.Q.value = 6;
+
+            // zachte in/uit-fade zodat niets klikt of blijft hangen
+            master.gain.setValueAtTime(0.0001, t);
+            master.gain.exponentialRampToValueAtTime(0.22, t + 0.08);
+            master.gain.setValueAtTime(0.22, t + DUR - 0.6);
+            master.gain.exponentialRampToValueAtTime(0.0001, t + DUR);
+            filter.connect(master).connect(audioCtx.destination);
+
+            // gemeenschappelijke wobbel voor het duizelige effect
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+            lfo.type = 'sine';
+            lfo.frequency.setValueAtTime(5.5, t);
+            lfo.frequency.linearRampToValueAtTime(3, t + DUR);
+            lfoGain.gain.setValueAtTime(25, t);
+            lfo.connect(lfoGain);
+
+            // twee licht ontstemde stemmen → voller, zwevend geluid
+            [0, 4].forEach((detune, i) => {
+              const osc = audioCtx.createOscillator();
+              const g = audioCtx.createGain();
+              osc.type = i === 0 ? 'sine' : 'triangle';
+              osc.detune.value = detune - 2;
+              osc.frequency.setValueAtTime(392, t);
+              osc.frequency.exponentialRampToValueAtTime(196, t + DUR);
+              lfoGain.connect(osc.frequency);
+              g.gain.value = i === 0 ? 0.6 : 0.4;
+              osc.connect(g).connect(filter);
+              osc.start(t);
+              osc.stop(t + DUR + 0.05);
+            });
+
+            lfo.start(t);
+            lfo.stop(t + DUR + 0.05);
+          } catch (e) {}
+        }
+
+        const toggle = document.getElementById('soundToggle');
+        function render() {
+          toggle.textContent = enabled ? 'Sound on' : 'Sound off';
+          toggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        }
+        toggle.addEventListener('click', () => {
+          enabled = !enabled;
+          try { localStorage.setItem('sound', enabled ? 'on' : 'off'); } catch (e) {}
+          render();
+          click(0.6);
+        });
+        render();
+
+        return { click, hypno };
+      })();
+
+      // ── THEME SWITCHER (verticale kanaalkiezer met glijdende indicator) ──
+      (() => {
+        const themeSwitch = document.getElementById('themeSwitch');
+        const themeBar = document.getElementById('themeBar');
+        const themeOpts = Array.from(themeSwitch.querySelectorAll('.theme-opt'));
+
+        function positionBar(btn) {
+          // gsm: balk onder het actieve kanaal (horizontaal); groter scherm: ernaast (verticaal)
+          const horizontal = getComputedStyle(themeSwitch).flexDirection === 'row';
+          themeBar.style.left   = horizontal ? btn.offsetLeft + 'px' : '';
+          themeBar.style.width  = horizontal ? btn.offsetWidth + 'px' : '';
+          themeBar.style.top    = horizontal ? '' : btn.offsetTop + 'px';
+          themeBar.style.height = horizontal ? '' : btn.offsetHeight + 'px';
+        }
+
+        function applyTheme(choice) {
+          document.documentElement.setAttribute('data-theme', choice);
+          const active = themeOpts.find(b => b.dataset.theme === choice) || themeOpts[1];
+          themeOpts.forEach(b => {
+            const on = b === active;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+          });
+          positionBar(active);
+        }
+
+        applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
+        themeOpts.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const choice = btn.dataset.theme;
+            try { localStorage.setItem('theme', choice); } catch (e) {}
+            applyTheme(choice);
+            window.sound.click(0.6);   // korte kanaal-klik
+          });
+        });
+
+        // herpositioneer de balk als het venster verandert (font/hoogte kan verschuiven)
+        const reposition = () => {
+          const active = themeOpts.find(b => b.classList.contains('is-active'));
+          if (active) positionBar(active);
+        };
+        window.addEventListener('resize', reposition);
+        document.fonts?.ready.then(reposition);
+      })();
+    </script>
+
+    <slot />
+
+    <!-- CRT post-processing overlay -->
+    <div class="crt" aria-hidden="true"></div>
+
+  </body>
+</html>
