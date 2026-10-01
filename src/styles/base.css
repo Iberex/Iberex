@@ -291,6 +291,10 @@ a {
   .sound-toggle { right: 2rem; bottom: 1.8rem; }
 }
 
+/* Safari: nooit zijn eigen grijze vak met afspeelknop over de ogen tonen */
+video::-webkit-media-controls,
+video::-webkit-media-controls-start-playback-button { display: none !important; -webkit-appearance: none; }
+
 /* zichtbare focus voor toetsenbordgebruikers */
 :focus-visible {
   outline: 2px solid var(--title-hover);

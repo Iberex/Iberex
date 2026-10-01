@@ -71,6 +71,23 @@ const isHome = Astro.url.pathname === '/';
           || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
           || (/Safari\//.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox/.test(ua));
         window.eyes = name => `/${name}.${webkit ? 'mov' : 'webm'}`;
+        // start de ogen-video; weigert de browser (bv. Safari in spaarstand, of een video die bij het laden
+        // onzichtbaar was), dan de transparante gif in de plaats i.p.v. een grijs vak met afspeelknop
+        window.playEyes = video => new Promise(resolve => {
+          if (video.tagName !== 'VIDEO') return resolve(video);
+          const p = video.play();
+          (p || Promise.resolve()).then(() => resolve(video)).catch(() => {
+            const img = document.createElement('img');
+            img.src = '/eyes.gif';
+            img.alt = '';
+            img.className = video.className;
+            img.id = video.id;
+            img.style.cssText = video.style.cssText;
+            img.setAttribute('aria-hidden', 'true');
+            video.replaceWith(img);
+            resolve(img);
+          });
+        });
       })();
 
       try {
@@ -104,7 +121,13 @@ const isHome = Astro.url.pathname === '/';
       </p>
       <div class="welcome-center">
         <video class="welcome-eyes" id="welcomeEyes" autoplay loop muted playsinline></video>
-        <script is:inline>document.getElementById('welcomeEyes').src = window.eyes('eyes');</script>
+        <script is:inline>
+          (() => {
+            const v = document.getElementById('welcomeEyes');
+            v.src = window.eyes('eyes');
+            window.welcomeEyes = window.playEyes(v);
+          })();
+        </script>
         <p class="welcome-name">
           {site.name.split('').map((ch, i) => (
             <span class="welcome-char" style={`--i:${i}`}>{ch === ' ' ? '\u00a0' : ch}</span>
@@ -154,13 +177,18 @@ const isHome = Astro.url.pathname === '/';
         const countEl = document.getElementById('welcomeCount');
         const barEl = document.getElementById('welcomeBar');
         const textEl = document.getElementById('welcomeText');
-        const eyes = document.getElementById('welcomeEyes');
 
         // wat moet er klaar zijn?
         const tasks = [
           document.fonts ? document.fonts.ready : Promise.resolve(),
           new Promise(r => (document.readyState === 'complete' ? r() : window.addEventListener('load', r, { once: true }))),
-          new Promise(r => (eyes.readyState >= 3 ? r() : (eyes.addEventListener('canplaythrough', r, { once: true }), eyes.addEventListener('error', r, { once: true })))),
+          // de ogen: video (klaar om te spelen) of, als die niet mocht spelen, de gif (geladen)
+          window.welcomeEyes.then(eyes => new Promise(r => {
+            const ready = eyes.tagName === 'VIDEO' ? eyes.readyState >= 3 : eyes.complete;
+            if (ready) return r();
+            eyes.addEventListener(eyes.tagName === 'VIDEO' ? 'canplaythrough' : 'load', r, { once: true });
+            eyes.addEventListener('error', r, { once: true });
+          })),
         ];
         let loaded = 0;
         tasks.forEach(t => t.then(() => { loaded++; }));

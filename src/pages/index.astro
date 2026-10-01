@@ -132,6 +132,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
           const titleEl = a.querySelector('.row-title');
           titleEl.addEventListener('mouseenter', () => {
             if (!canHover) return;   // gsm: een tik is geen hover
+            startEyes();
             cursorGif.classList.add('is-visible');
             list.classList.add('is-hovering');
             setHover(i, true);   // alle regels van dit project mee oplichten
@@ -394,8 +395,15 @@ const projects = (await getCollection('projects', p => !p.data.draft))
       window.addEventListener('touchcancel', release);
 
       // ── cursor-volgende ogen (verschijnen bij hover over een project) ──
-      const cursorGif = document.getElementById('cursorGif');
+      let cursorGif = document.getElementById('cursorGif');   // kan een gif worden als de video niet mag spelen
       cursorGif.src = window.eyes('eyes');
+      // Safari start een video die bij het laden onzichtbaar is niet vanzelf: bij hover zelf starten
+      let eyesStarted = false;
+      function startEyes() {
+        if (eyesStarted) return;
+        eyesStarted = true;
+        window.playEyes(cursorGif).then(el => { cursorGif = el; });
+      }
       window.addEventListener('mousemove', (e) => {
         cursorGif.style.top = e.clientY + 'px';
         cursorGif.style.left = e.clientX + 'px';
@@ -403,7 +411,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
 
       let hypnoPlaying = false;
       function playHypno(withSound = true) {
-        if (hypnoPlaying) return;
+        if (hypnoPlaying || cursorGif.tagName !== 'VIDEO') return;
         hypnoPlaying = true;
         if (withSound) window.sound.hypno();
         cursorGif.loop = false;
