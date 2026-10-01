@@ -13,7 +13,9 @@ summary: "Giant phones on benches across Antwerp. Scan, pick up, and hear an uns
 cover: "/projects/antwerp-is-calling/cover.jpg"
 thumb: "/projects/antwerp-is-calling/thumb.png"
 coverVideo: "/projects/antwerp-is-calling/cover.mp4"   # promovideo zonder geluid, bovenaan de projectpagina
-gallery: []
+gallery:
+  - { src: "/projects/antwerp-is-calling/expo-stand.jpg", alt: "Our Antwerp is Calling stand at the expo: a giant blue phone on a bench, a plant wall and the campaign posters" }
+  - { src: "/projects/antwerp-is-calling/expo-pillars.jpg", alt: "Wooden pillars with the posters, the website on a screen and a vintage phone you could pick up" }
 links:
   - { label: "Try the mobile experience", href: "https://koby-low.github.io/VoicesOfAntwerp/home" }
   - { label: "Promo website", href: "https://koby-low.github.io/VoicesOfAntwerpPromo/" }
@@ -48,6 +50,6 @@ I also translated our visual style into code. The bold, playful identity from Fi
 
 ## Result
 
-A working product, not just a prototype: the full mobile experience on location and a website to explore the stories from anywhere, made for Devine and the city of Antwerp.
+A working product, not just a prototype: the full mobile experience on location and a website to explore the stories from anywhere, made for Devine and the city of Antwerp. We presented it to the jury in our own stand: a giant phone on a bench, the posters, the website and a real phone you could pick up.
 
 It was also one of my first group projects where the teamwork just clicked. Everyone knew their part, we helped each other whenever someone got stuck, and we could build on each other's ideas without having to explain everything twice.

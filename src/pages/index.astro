@@ -124,12 +124,6 @@ const projects = (await getCollection('projects', p => !p.data.draft))
           a.addEventListener('click', e => {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;   // nieuw tabblad mag gewoon
             e.preventDefault();
-            // gsm (geen hover): de ogen verschijnen waar je tikt, net als op desktop bij de cursor
-            if (!canHover) {
-              cursorGif.style.top = e.clientY + 'px';
-              cursorGif.style.left = e.clientX + 'px';
-              cursorGif.classList.add('is-visible');
-            }
             // centreer het HELE project van deze regel, niet de losse regel
             const local = mod(i, nd);
             centerRow(i + (dispCenter[local] - local));
@@ -321,7 +315,8 @@ const projects = (await getCollection('projects', p => !p.data.draft))
       function openProject(p) {
         if (opening) return;
         opening = true;
-        playHypno(false);          // enkel beeld: het lange hypno-geluid zou bij het wisselen afgekapt worden
+        // enkel beeld (het lange hypno-geluid zou bij het wisselen afgekapt worden); gsm: geen ogen bij het tikken
+        if (canHover) playHypno(false);
         window.sound.click(0.8);
         // zonder view transitions (bv. Firefox): zelf snel uitfaden
         if (!hasViewTransitions) document.body.classList.add('is-leaving');
@@ -331,7 +326,6 @@ const projects = (await getCollection('projects', p => !p.data.draft))
       window.addEventListener('pageshow', () => {
         opening = false;
         document.body.classList.remove('is-leaving');
-        if (!canHover) cursorGif.classList.remove('is-visible');   // gsm: ogen weg als je terugkomt
       });
 
       // openings-spin, alsof de machine net is aangeslingerd
