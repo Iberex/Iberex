@@ -38,7 +38,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
     </ul>
 
     <!-- animatie die de cursor volgt bij hover (ogen met alpha) -->
-    <video class="cursor-gif" id="cursorGif" src="/eyes.webm"
+    <video class="cursor-gif" id="cursorGif"
            autoplay loop muted playsinline aria-hidden="true"></video>
 
     <script define:vars={{ projects }}>
@@ -79,6 +79,9 @@ const projects = (await getCollection('projects', p => !p.data.draft))
         });
         return best;
       }
+
+      // muis/trackpad of touchscreen?
+      const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
       const clip = document.getElementById('clip');
       const list = document.getElementById('list');
@@ -121,6 +124,12 @@ const projects = (await getCollection('projects', p => !p.data.draft))
           a.addEventListener('click', e => {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;   // nieuw tabblad mag gewoon
             e.preventDefault();
+            // gsm (geen hover): de ogen verschijnen waar je tikt, net als op desktop bij de cursor
+            if (!canHover) {
+              cursorGif.style.top = e.clientY + 'px';
+              cursorGif.style.left = e.clientX + 'px';
+              cursorGif.classList.add('is-visible');
+            }
             // centreer het HELE project van deze regel, niet de losse regel
             const local = mod(i, nd);
             centerRow(i + (dispCenter[local] - local));
@@ -128,11 +137,13 @@ const projects = (await getCollection('projects', p => !p.data.draft))
           });
           const titleEl = a.querySelector('.row-title');
           titleEl.addEventListener('mouseenter', () => {
+            if (!canHover) return;   // gsm: een tik is geen hover
             cursorGif.classList.add('is-visible');
             list.classList.add('is-hovering');
             setHover(i, true);   // alle regels van dit project mee oplichten
           });
           titleEl.addEventListener('mouseleave', () => {
+            if (!canHover) return;
             cursorGif.classList.remove('is-visible');
             list.classList.remove('is-hovering');
             setHover(i, false);
@@ -174,6 +185,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
         const persp = parseFloat(getComputedStyle(clip).perspective) || 1100;
         const zoom = persp / Math.max(1, persp - radius);
         const maxTitleW = (window.innerWidth - 2 * (mobile ? 20 : sideW) - (mobile ? 0 : 24)) / zoom;
+        dirty = true;
         rows.forEach(r => {
           r.style.height = `${rowH}px`;
           r.style.marginTop = `${-rowH / 2}px`;
@@ -188,7 +200,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
 
       function render() {
         const cf = pos / rowH; // hoeveel vakjes gedraaid
-        const blur = Math.min(3, speed * 0.08);   // lichte motion blur
+        const blur = canHover ? Math.min(3, speed * 0.08) : 0;   // lichte motion blur (niet op gsm: te zwaar)
         let centerIdx = -1, centerAbs = Infinity;
         const SQUEEZE = 0.78;   // regels van een meerregelig project dichter bij elkaar (1 = normale afstand)
         for (let i = 0; i < rows.length; i++) {
@@ -247,10 +259,16 @@ const projects = (await getCollection('projects', p => !p.data.draft))
 
       // veer-demping: bouwt snelheid op en loopt zacht uit (geen abrupte start/stop)
       let vel = 0;
+      let dirty = true;       // enkel hertekenen als er iets veranderd is
+      let dragging = false;   // vinger op het scherm: de trommel volgt direct
       function tick() {
         const prev = pos;
         const diff = target - pos;
-        if (Math.abs(diff) > 0.05 || Math.abs(vel) > 0.05) {
+        if (dragging) {
+          // tijdens het slepen hangt de trommel aan je vinger (bijna 1-op-1, net niet hoekig)
+          vel = diff * 0.45;
+          pos += vel;
+        } else if (Math.abs(diff) > 0.05 || Math.abs(vel) > 0.05) {
           vel += diff * 0.014;   // veerkracht: hoger = sneller
           vel *= 0.82;           // demping: lager = stopt sneller
           pos += vel;
@@ -267,7 +285,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
           window.sound.click(Math.min(1, 0.15 + speed * 0.02));
         }
 
-        render();
+        if (pos !== prev || speed > 0.01 || dirty) { dirty = false; render(); }
         requestAnimationFrame(tick);
       }
 
@@ -313,6 +331,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
       window.addEventListener('pageshow', () => {
         opening = false;
         document.body.classList.remove('is-leaving');
+        if (!canHover) cursorGif.classList.remove('is-visible');   // gsm: ogen weg als je terugkomt
       });
 
       // openings-spin, alsof de machine net is aangeslingerd
@@ -344,18 +363,45 @@ const projects = (await getCollection('projects', p => !p.data.draft))
         if (e.key === 'Enter' && centerProject && !e.target.closest('button, a')) openProject(centerProject);
       });
 
-      let ty = null;
-      window.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, { passive: true });
+      // ── swipen op gsm: volgt je vinger, en bij loslaten draait hij met je vaart verder (zoals een echte rol) ──
+      const DRAG = 1.25;       // px trommel per px vinger
+      let ty = null, flick = 0, lastT = 0;
+      window.addEventListener('touchstart', e => {
+        if (e.touches.length !== 1 || e.target.closest('button, .site-nav, .intro')) return;
+        ty = e.touches[0].clientY;
+        lastT = performance.now();
+        flick = 0;
+        dragging = true;
+        target = pos;          // pakt de trommel vast waar hij nu staat
+      }, { passive: true });
       window.addEventListener('touchmove', e => {
         if (ty === null) return;
+        e.preventDefault();    // geen terugveren of pull-to-refresh van de pagina
         const y = e.touches[0].clientY;
-        nudge((ty - y) * 1.6);
+        const now = performance.now();
+        const d = (ty - y) * DRAG;
+        // snelheid in px/ms, licht uitgemiddeld zodat één schokje de worp niet bepaalt
+        flick = flick * 0.6 + (d / Math.max(1, now - lastT)) * 0.4;
+        nudge(d);
         ty = y;
-      }, { passive: true });
-      window.addEventListener('touchend', () => { ty = null; snapTarget(); });
+        lastT = now;
+      }, { passive: false });
+      const release = () => {
+        if (ty === null) return;
+        ty = null;
+        dragging = false;
+        // te lang stilgehouden voor het loslaten = geen worp
+        if (performance.now() - lastT > 90) flick = 0;
+        // worp: vaart (px/ms) × ±¼ s uitlopen, maximaal één volle ronde
+        nudge(Math.max(-loopH, Math.min(loopH, flick * 250)));
+        snapTarget();
+      };
+      window.addEventListener('touchend', release);
+      window.addEventListener('touchcancel', release);
 
       // ── cursor-volgende ogen (verschijnen bij hover over een project) ──
       const cursorGif = document.getElementById('cursorGif');
+      cursorGif.src = window.eyes('eyes');
       window.addEventListener('mousemove', (e) => {
         cursorGif.style.top = e.clientY + 'px';
         cursorGif.style.left = e.clientX + 'px';
@@ -367,12 +413,12 @@ const projects = (await getCollection('projects', p => !p.data.draft))
         hypnoPlaying = true;
         if (withSound) window.sound.hypno();
         cursorGif.loop = false;
-        cursorGif.src = '/eyes-hypno.webm';
+        cursorGif.src = window.eyes('eyes-hypno');
         cursorGif.play().catch(() => {});
         cursorGif.onended = () => {
           cursorGif.onended = null;
           cursorGif.loop = true;
-          cursorGif.src = '/eyes.webm';
+          cursorGif.src = window.eyes('eyes');
           cursorGif.play().catch(() => {});
           hypnoPlaying = false;
         };

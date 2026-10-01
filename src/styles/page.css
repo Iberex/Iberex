@@ -562,3 +562,26 @@ body.is-page .sound-toggle { position: absolute; }
   .work-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .skill-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* gsm: geen telefoon-in-een-telefoon met een iframe waar je duim in blijft hangen tijdens het scrollen;
+   je bent al op je gsm, dus gewoon een duidelijke knop naar de live versie */
+@media (max-width: 760px) {
+  .case-demo:has(iframe) { justify-self: stretch; width: auto; }
+  .case-demo:has(iframe) .phone { display: none; }
+  .case-demo:has(iframe) .case-demo-head { flex-direction: column; align-items: stretch; margin: 0; }
+  .case-demo:has(iframe) .case-demo-open {
+    display: block;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--title-hover);
+    text-align: center;
+    font-weight: 500;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+.on-phone { display: none; }
+@media (max-width: 760px) {
+  .case-demo:has(iframe) .on-phone { display: inline; }
+  .case-demo:has(iframe) .on-desk { display: none; }
+}

@@ -19,6 +19,7 @@ const isHome = Astro.url.pathname === '/';
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#141414" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <meta property="og:type" content="website" />
@@ -62,6 +63,16 @@ const isHome = Astro.url.pathname === '/';
     </style>
     <!-- thema meteen zetten, zodat er bij het laden geen flits van het verkeerde thema is -->
     <script is:inline>
+      // ogen-video: Safari en ALLE browsers op iPhone/iPad (WebKit) tonen geen transparantie in .webm
+      // (→ wit vak rond de ogen); daar een HEVC-.mov met alfakanaal gebruiken
+      (() => {
+        const ua = navigator.userAgent;
+        const webkit = /iP(hone|ad|od)/.test(ua)
+          || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+          || (/Safari\//.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox/.test(ua));
+        window.eyes = name => `/${name}.${webkit ? 'mov' : 'webm'}`;
+      })();
+
       try {
         const t = localStorage.getItem('theme');
         if (t === 'light' || t === 'dark' || t === 'ibe') document.documentElement.setAttribute('data-theme', t);
@@ -92,7 +103,8 @@ const isHome = Astro.url.pathname === '/';
         <span>Portfolio</span>
       </p>
       <div class="welcome-center">
-        <video class="welcome-eyes" id="welcomeEyes" src="/eyes.webm" autoplay loop muted playsinline></video>
+        <video class="welcome-eyes" id="welcomeEyes" autoplay loop muted playsinline></video>
+        <script is:inline>document.getElementById('welcomeEyes').src = window.eyes('eyes');</script>
         <p class="welcome-name">
           {site.name.split('').map((ch, i) => (
             <span class="welcome-char" style={`--i:${i}`}>{ch === ' ' ? '\u00a0' : ch}</span>
@@ -329,8 +341,11 @@ const isHome = Astro.url.pathname === '/';
           themeBar.style.height = horizontal ? '' : btn.offsetHeight + 'px';
         }
 
+        const themeColor = document.querySelector('meta[name="theme-color"]');
         function applyTheme(choice) {
           document.documentElement.setAttribute('data-theme', choice);
+          // browserbalk op gsm in dezelfde kleur als de pagina
+          themeColor.content = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
           const active = themeOpts.find(b => b.dataset.theme === choice) || themeOpts[1];
           themeOpts.forEach(b => {
             const on = b === active;
