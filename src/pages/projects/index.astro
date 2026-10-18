@@ -2,6 +2,7 @@
 import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import Media from '../../components/Media.astro';
+import Bi from '../../components/Bi.astro';
 import '../../styles/page.css';
 
 const projects = (await getCollection('projects', p => !p.data.draft))
@@ -11,7 +12,7 @@ const projects = (await getCollection('projects', p => !p.data.draft))
 <Layout title="Projects" bodyClass="is-page">
   <main class="case">
     <div class="case-head case-head--page">
-      <h1 class="case-title">Projects</h1>
+      <h1 class="case-title"><Bi en="Projects" nl="Projecten" /></h1>
     </div>
 
     <ul class="work-grid">

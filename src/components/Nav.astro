@@ -36,6 +36,7 @@ const isCurrent = (href: string) =>
         const on = b.dataset.langBtn === choice;
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
+      window.dispatchEvent(new CustomEvent('langchange', { detail: choice }));
     }
     let saved = 'en';
     try { saved = localStorage.getItem('lang') || 'en'; } catch (e) {}

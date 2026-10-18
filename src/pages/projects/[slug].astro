@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import Media from '../../components/Media.astro';
+import Bi from '../../components/Bi.astro';
 import '../../styles/page.css';
 
 export async function getStaticPaths() {
@@ -36,16 +37,16 @@ const toEmbed = (link: string) => {
   return u.toString();
 };
 const figmaViews = [
-  d.figma && { label: 'Final design', link: d.figma, embed: toEmbed(d.figma) },
-  d.figmaProcess && { label: 'Process', link: d.figmaProcess, embed: toEmbed(d.figmaProcess) },
-].filter(Boolean) as { label: string; link: string; embed: string }[];
+  d.figma && { labelEn: 'Final design', labelNl: 'Eindontwerp', link: d.figma, embed: toEmbed(d.figma) },
+  d.figmaProcess && { labelEn: 'Process', labelNl: 'Proces', link: d.figmaProcess, embed: toEmbed(d.figmaProcess) },
+].filter(Boolean) as { labelEn: string; labelNl: string; link: string; embed: string }[];
 const figmaEmbed = figmaViews[0]?.embed ?? null;
 ---
 
 <Layout title={d.title} description={d.summary} bodyClass="is-page">
   <main class="case" id="top">
 
-    <a class="case-back" href="/projects" data-back>← Back</a>
+    <a class="case-back" href="/projects" data-back>← <Bi en="Back" nl="Terug" /></a>
 
     {(d.coverVideo || d.cover) && (
       <div class:list={['case-header', 'reveal', { 'case-header--video': d.coverVideo }]}>
@@ -62,10 +63,10 @@ const figmaEmbed = figmaViews[0]?.embed ?? null;
 
     <div class="case-intro">
       <dl class="case-meta">
-        <div><dt>Year</dt><dd>{d.year}</dd></div>
-        {d.client && <div><dt>Partners</dt><dd>{d.client}</dd></div>}
-        <div><dt>Role</dt><dd>{d.role}</dd></div>
-        {d.tools.length > 0 && <div><dt>Tools</dt><dd>{d.tools.map(t => <span>{t}</span>)}</dd></div>}
+        <div><dt><Bi en="Year" nl="Jaar" /></dt><dd>{d.year}</dd></div>
+        {d.client && <div><dt><Bi en="Partners" nl="Partners" /></dt><dd>{d.client}</dd></div>}
+        <div><dt><Bi en="Role" nl="Rol" /></dt><dd>{d.role}</dd></div>
+        {d.tools.length > 0 && <div><dt><Bi en="Tools" nl="Tools" /></dt><dd>{d.tools.map(t => <span>{t}</span>)}</dd></div>}
       </dl>
 
       <div>
@@ -86,8 +87,8 @@ const figmaEmbed = figmaViews[0]?.embed ?? null;
       {d.mobileDemo && !demoIsImage && (
         <aside class="case-demo" aria-label="Live mobile experience">
           <div class="case-demo-head">
-            <p class="case-demo-label">Live demo · Try it yourself</p>
-            <a class="case-demo-open" href={d.mobileDemo} target="_blank" rel="noopener"><span class="on-desk">Open on your phone</span><span class="on-phone">Open live demo</span> <span aria-hidden="true">↗</span></a>
+            <p class="case-demo-label"><Bi en="Live demo · Try it yourself" nl="Live demo · Probeer het zelf" /></p>
+            <a class="case-demo-open" href={d.mobileDemo} target="_blank" rel="noopener"><span class="on-desk"><Bi en="Open on your phone" nl="Open op je telefoon" /></span><span class="on-phone"><Bi en="Open live demo" nl="Open live demo" /></span> <span aria-hidden="true">↗</span></a>
           </div>
           <div class="phone">
             <div class="phone-screen">
@@ -106,7 +107,7 @@ const figmaEmbed = figmaViews[0]?.embed ?? null;
       {d.mobileDemo && demoIsImage && (
         <aside class="case-demo" aria-label="Mobile design">
           <div class="case-demo-head">
-            <p class="case-demo-label">Mobile design · Scroll through it</p>
+            <p class="case-demo-label"><Bi en="Mobile design · Scroll through it" nl="Mobiel ontwerp · Scroll erdoorheen" /></p>
           </div>
           <div class="phone">
             <div class="phone-screen phone-screen--scroll" tabindex="0" aria-label={`${d.title}: mobile design, scrollable`}>
@@ -126,12 +127,12 @@ const figmaEmbed = figmaViews[0]?.embed ?? null;
                 <span class="case-demo-label">Figma ·</span>
                 {figmaViews.map((v, i) => (
                   <button type="button" role="tab" class="figma-tab" aria-selected={i === 0 ? 'true' : 'false'}
-                          data-embed={v.embed} data-link={v.link}>{v.label}</button>
+                          data-embed={v.embed} data-link={v.link}><Bi en={v.labelEn} nl={v.labelNl} /></button>
                 ))}
               </div>
             )
-            : <p class="case-demo-label">Figma · {figmaViews[0].label}</p>}
-          <a class="case-demo-open" id="figmaOpen" href={figmaViews[0].link} target="_blank" rel="noopener">Open in Figma <span aria-hidden="true">↗</span></a>
+            : <p class="case-demo-label">Figma · <Bi en={figmaViews[0].labelEn} nl={figmaViews[0].labelNl} /></p>}
+          <a class="case-demo-open" id="figmaOpen" href={figmaViews[0].link} target="_blank" rel="noopener"><Bi en="Open in Figma" nl="Open in Figma" /> <span aria-hidden="true">↗</span></a>
         </div>
         <div class="case-figma-frame">
           <iframe id="figmaFrame" src={figmaEmbed} title={`${d.title}: Figma`} loading="lazy" allowfullscreen></iframe>
@@ -150,9 +151,9 @@ const figmaEmbed = figmaViews[0]?.embed ?? null;
     )}
 
     <nav class="case-pager" aria-label="More projects">
-      <a href={`/projects/${prev.id}`}><span>← Previous</span><strong>{prev.data.title}</strong></a>
-      <a class="case-top" href="#top">Back to top ↑</a>
-      <a class="next" href={`/projects/${next.id}`}><span>Next →</span><strong>{next.data.title}</strong></a>
+      <a href={`/projects/${prev.id}`}><span>← <Bi en="Previous" nl="Vorige" /></span><strong>{prev.data.title}</strong></a>
+      <a class="case-top" href="#top"><Bi en="Back to top" nl="Terug naar boven" /> ↑</a>
+      <a class="next" href={`/projects/${next.id}`}><span><Bi en="Next" nl="Volgende" /> →</span><strong>{next.data.title}</strong></a>
     </nav>
   </main>
 

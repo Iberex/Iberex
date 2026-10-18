@@ -1,6 +1,7 @@
 ---
 import '../styles/base.css';
 import Nav from '../components/Nav.astro';
+import Bi from '../components/Bi.astro';
 import { site } from '../data/site';
 
 interface Props {
@@ -201,7 +202,8 @@ const isHome = Astro.url.pathname === '/';
         tasks.forEach(t => t.then(() => { loaded++; }));
 
         // getypte regel, zoals op de allereerste versie van de site
-        const line = '> creative.exe is loading...';
+        const bootLang = document.documentElement.getAttribute('data-lang') === 'nl' ? 'nl' : 'en';
+        const line = bootLang === 'nl' ? '> creative.exe wordt geladen...' : '> creative.exe is loading...';
         let typed = 0;
         const typer = setInterval(() => {
           typed++;
@@ -226,7 +228,7 @@ const isHome = Astro.url.pathname === '/';
 
         function finish() {
           clearInterval(typer);
-          textEl.textContent = '> ready. welcome!';
+          textEl.textContent = bootLang === 'nl' ? '> klaar. welkom!' : '> ready. welcome!';
           try { sessionStorage.setItem('welcomed', '1'); } catch (e) {}
           setTimeout(() => {
             el.classList.add('is-leaving');
@@ -254,12 +256,14 @@ const isHome = Astro.url.pathname === '/';
 
     <div class="theme-switch" id="themeSwitch" role="radiogroup" aria-label="Choose theme">
       <span class="theme-bar" id="themeBar" aria-hidden="true"></span>
-      <button class="theme-opt" type="button" data-theme="light" role="radio">Light</button>
-      <button class="theme-opt" type="button" data-theme="dark"  role="radio">Dark</button>
+      <button class="theme-opt" type="button" data-theme="light" role="radio"><Bi en="Light" nl="Licht" /></button>
+      <button class="theme-opt" type="button" data-theme="dark"  role="radio"><Bi en="Dark" nl="Donker" /></button>
       <button class="theme-opt" type="button" data-theme="ibe"   role="radio">Ibe</button>
     </div>
 
-    <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">Sound on</button>
+    <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">
+      <Bi en="Sound on" nl="Geluid aan" />
+    </button>
 
     <script is:inline>
       // ── gedeeld geluid (zelf gegenereerd met Web Audio): window.sound ──
@@ -346,8 +350,13 @@ const isHome = Astro.url.pathname === '/';
         }
 
         const toggle = document.getElementById('soundToggle');
+        const soundLabels = {
+          en: { on: 'Sound on', off: 'Sound off' },
+          nl: { on: 'Geluid aan', off: 'Geluid uit' },
+        };
         function render() {
-          toggle.textContent = enabled ? 'Sound on' : 'Sound off';
+          const lang = document.documentElement.getAttribute('data-lang') === 'nl' ? 'nl' : 'en';
+          toggle.textContent = enabled ? soundLabels[lang].on : soundLabels[lang].off;
           toggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
         }
         toggle.addEventListener('click', () => {
@@ -356,6 +365,7 @@ const isHome = Astro.url.pathname === '/';
           render();
           click(0.6);
         });
+        window.addEventListener('langchange', render);
         render();
 
         return { click, hypno };
