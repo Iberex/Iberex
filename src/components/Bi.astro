@@ -1,0 +1,10 @@
+---
+// Tweetalige tekst: toont beide versies, CSS/JS (zie base.css + Layout.astro) verbergt
+// de verkeerde op basis van html[data-lang]. Gebruik: <Bi en="Hello" nl="Hallo" />
+interface Props {
+  en: string;
+  nl: string;
+}
+const { en, nl } = Astro.props;
+---
+<span data-i18n-en>{en}</span><span data-i18n-nl>{nl}</span>

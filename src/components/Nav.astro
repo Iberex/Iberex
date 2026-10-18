@@ -1,8 +1,10 @@
 ---
+import Bi from './Bi.astro';
+
 const links = [
-  { label: 'Home', href: '/' },
-  { label: 'Projects', href: '/projects' },
-  { label: 'About', href: '/about' },
+  { en: 'Home', nl: 'Home', href: '/' },
+  { en: 'Projects', nl: 'Projecten', href: '/projects' },
+  { en: 'About', nl: 'Over mij', href: '/about' },
 ];
 
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
@@ -12,6 +14,39 @@ const isCurrent = (href: string) =>
 
 <nav class="site-nav" aria-label="Main menu">
   {links.map(link => (
-    <a href={link.href} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a>
+    <a href={link.href} aria-current={isCurrent(link.href) ? 'page' : undefined}>
+      <Bi en={link.en} nl={link.nl} />
+    </a>
   ))}
+  <div class="lang-switch" id="langSwitch" role="radiogroup" aria-label="Language / Taal">
+    <button type="button" data-lang-btn="en" role="radio" aria-pressed="true">EN</button>
+    <span class="lang-sep" aria-hidden="true">/</span>
+    <button type="button" data-lang-btn="nl" role="radio" aria-pressed="false">NL</button>
+  </div>
 </nav>
+
+<script is:inline>
+  (() => {
+    const root = document.documentElement;
+    const btns = Array.from(document.querySelectorAll('[data-lang-btn]'));
+    function applyLang(choice) {
+      root.setAttribute('data-lang', choice);
+      root.setAttribute('lang', choice);
+      btns.forEach(b => {
+        const on = b.dataset.langBtn === choice;
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    let saved = 'en';
+    try { saved = localStorage.getItem('lang') || 'en'; } catch (e) {}
+    applyLang(saved);
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const choice = btn.dataset.langBtn;
+        try { localStorage.setItem('lang', choice); } catch (e) {}
+        applyLang(choice);
+        if (window.sound) window.sound.click(0.5);
+      });
+    });
+  })();
+</script>

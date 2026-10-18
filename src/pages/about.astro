@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Layout from '../layouts/Layout.astro';
+import Bi from '../components/Bi.astro';
 import { site } from '../data/site';
 import '../styles/page.css';
 import '../styles/about.css';
@@ -13,10 +14,10 @@ const socials = site.socials.filter(s => s.href);
 const isTodo = (s: string) => s.trim() === 'x' || /(^|[\s,])x$/.test(s.trim());
 
 const facts = [
-  { label: 'Name', value: site.name },
-  { label: 'Based in', value: site.basedIn },
-  { label: 'Studying at', value: site.studyingAt },
-  { label: 'Status', value: site.status },
+  { en: 'Name', nl: 'Naam', value: site.name },
+  { en: 'Based in', nl: 'Woonplaats', value: site.basedIn },
+  { en: 'Studying at', nl: 'Studeert aan', value: site.studyingAt },
+  { en: 'Status', nl: 'Status', value: site.status },
 ];
 ---
 
@@ -25,7 +26,7 @@ const facts = [
 
     <!-- titel + portret -->
     <header class="about-hero">
-      <h1 class="about-title">About</h1>
+      <h1 class="about-title"><Bi en="About" nl="Over mij" /></h1>
       {site.photo && (
         <figure class="about-photo reveal">
           <img class="media" src={site.photo} alt={`Portrait of ${site.name}`} loading="eager" decoding="async" />
@@ -37,25 +38,31 @@ const facts = [
     <dl class="about-facts">
       {facts.map(f => (
         <div>
-          <dt>{f.label}</dt>
-          <dd class:list={{ todo: isTodo(f.value) }}>{f.value}</dd>
+          <dt><Bi en={f.en} nl={f.nl} /></dt>
+          {typeof f.value === 'string'
+            ? <dd class:list={{ todo: isTodo(f.value) }}>{f.value}</dd>
+            : <dd class:list={{ todo: isTodo(f.value.en) }}><Bi en={f.value.en} nl={f.value.nl} /></dd>}
         </div>
       ))}
     </dl>
 
     <!-- intro -->
     <section class="about-row">
-      <h2 class="about-label">Intro</h2>
+      <h2 class="about-label"><Bi en="Intro" nl="Intro" /></h2>
       <div>
-        <p class:list={['about-intro', { todo: isTodo(site.intro) }]}>{site.intro}</p>
-        {hasCv && <a class="about-link" href={site.cv} download>Download CV <span aria-hidden="true">↓</span></a>}
+        <p class:list={['about-intro', { todo: isTodo(site.intro.en) }]}><Bi en={site.intro.en} nl={site.intro.nl} /></p>
+        {hasCv && (
+          <a class="about-link" href={site.cv} download>
+            <Bi en="Download CV" nl="Download CV" /> <span aria-hidden="true">↓</span>
+          </a>
+        )}
       </div>
     </section>
 
     <!-- wat ik doe en waarmee: per groep één blok grote woorden, gescheiden door schuine strepen;
          ze lichten op bij hover, zoals de titels in de trommel -->
     <section class="about-row">
-      <h2 class="about-label">What I do</h2>
+      <h2 class="about-label"><Bi en="What I do" nl="Wat ik doe" /></h2>
       <div class="about-skills">
         {Object.entries(site.skills).map(([group, items]) => (
           <div class="about-skill-group">
@@ -75,11 +82,14 @@ const facts = [
 
     <!-- opleiding & ervaring -->
     <section class="about-row">
-      <h2 class="about-label">Education & experience</h2>
+      <h2 class="about-label"><Bi en="Education & experience" nl="Opleiding & ervaring" /></h2>
       <div class="about-timeline">
-        {[{ label: 'Education', items: site.education }, { label: 'Experience', items: site.experience }].map(col => (
+        {[
+          { en: 'Education', nl: 'Opleiding', items: site.education },
+          { en: 'Experience', nl: 'Ervaring', items: site.experience },
+        ].map(col => (
           <div>
-            <h3 class="about-col-title">{col.label}</h3>
+            <h3 class="about-col-title"><Bi en={col.en} nl={col.nl} /></h3>
             <ul>
               {col.items.map(e => (
                 <li>
@@ -89,10 +99,10 @@ const facts = [
                         ? <a class="about-entry-link" href={e.href} target="_blank" rel="noopener">{e.name} <span aria-hidden="true">↗</span></a>
                         : e.name}
                     </strong>
-                    <span class:list={['about-years', { todo: isTodo(e.years) }]}>{e.years}</span>
+                    <span class:list={['about-years', { todo: isTodo(e.years.en) }]}><Bi en={e.years.en} nl={e.years.nl} /></span>
                   </p>
-                  <p class:list={['about-detail', { todo: isTodo(e.detail) }]}>
-                    {e.detail}
+                  <p class:list={['about-detail', { todo: isTodo(e.detail.en) }]}>
+                    <Bi en={e.detail.en} nl={e.detail.nl} />
                   </p>
                 </li>
               ))}
@@ -106,7 +116,9 @@ const facts = [
     <section class="about-contact" id="contact">
       <!-- de grote tekst zelf opent meteen een nieuwe mail -->
       <h2 class="about-talk">
-        {isTodo(site.email) ? "Let's talk" : <a class="about-talk-link" href={`mailto:${site.email}`}>Let's talk</a>}
+        {isTodo(site.email)
+          ? <Bi en="Let's talk" nl="Laten we praten" />
+          : <a class="about-talk-link" href={`mailto:${site.email}`}><Bi en="Let's talk" nl="Laten we praten" /></a>}
       </h2>
       {isTodo(site.email)
         ? <p class="about-mail todo">x</p>

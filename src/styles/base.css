@@ -105,6 +105,37 @@ a {
   .intro-sub { font-size: 0.8rem; max-width: none; }
 }
 
+/* ── taalwissel: EN/NL, toont/verbergt de bijhorende <Bi>-helft overal op de site ── */
+[data-i18n-nl] { display: none; }
+html[data-lang="nl"] [data-i18n-en] { display: none; }
+html[data-lang="nl"] [data-i18n-nl] { display: inline; }
+
+.lang-switch {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  justify-content: flex-end;
+}
+.lang-switch button {
+  appearance: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  position: relative;
+  padding: 0.12rem 0;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--title-hover) 55%, transparent);
+  transition: color 0.22s ease;
+}
+.lang-switch button::after { content: ''; position: absolute; inset: -0.3rem -0.5rem; }
+.lang-switch button:hover { color: var(--title-hover); }
+.lang-switch button[aria-pressed="true"] { color: var(--title-hover); text-decoration: underline; text-underline-offset: 0.2em; }
+.lang-switch .lang-sep { color: color-mix(in srgb, var(--title-hover) 30%, transparent); font-size: 0.72rem; }
+
 /* ── nav rechtsboven: verticaal, rechts uitgelijnd, schuift naar links bij hover ── */
 .site-nav {
   position: fixed;

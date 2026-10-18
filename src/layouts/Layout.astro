@@ -9,13 +9,13 @@ interface Props {
   bodyClass?: string;
 }
 
-const { title, description = site.description, bodyClass } = Astro.props;
+const { title, description = site.description.en, bodyClass } = Astro.props;
 const fullTitle = title ? `${title} | ${site.name}` : `${site.name} | ${site.role}`;
 const isHome = Astro.url.pathname === '/';
 ---
 
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="dark" data-lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -93,6 +93,13 @@ const isHome = Astro.url.pathname === '/';
       try {
         const t = localStorage.getItem('theme');
         if (t === 'light' || t === 'dark' || t === 'ibe') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+      try {
+        const l = localStorage.getItem('lang');
+        if (l === 'en' || l === 'nl') {
+          document.documentElement.setAttribute('data-lang', l);
+          document.documentElement.setAttribute('lang', l);
+        }
       } catch (e) {}
 
       // welkomstscherm: één keer per bezoek. window.welcome is een belofte die afloopt zodra het scherm weg is
